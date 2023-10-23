@@ -6,13 +6,11 @@ from io import BytesIO
 import matplotlib.pyplot as plt
 
 def load_image_from_path(img_path):
-    img = Image.open( img_path )
-    return img
+    return Image.open( img_path )
 
 def load_image_from_url(img_url):
     res = requests.get( img_url )
-    img = Image.open( BytesIO( res.content ) )
-    return img
+    return Image.open( BytesIO( res.content ) )
 
 def resize_image_preserve_aspect(img_pil, w):
     wp = ( w / float( img_pil.size[0] ) )
@@ -27,8 +25,7 @@ def pil_to_b64(input):
     return output
 
 def b64_to_pil(input):
-    output = Image.open( BytesIO( base64.b64decode( input ) ) )
-    return output
+    return Image.open( BytesIO( base64.b64decode( input ) ) )
 
 def test_txt2img():
     ENDPOINT = "http://localhost:1337/txt2img"
@@ -59,7 +56,7 @@ def test_txt2img():
                 plt.close()
 
 def test_img2img():
-    ENDPOINT = "http://localhost:1337/img2img"    
+    ENDPOINT = "http://localhost:1337/img2img"
     IMG_URL  = 'https://raw.githubusercontent.com/CompVis/stable-diffusion/main/assets/stable-samples/img2img/sketch-mountains-input.jpg'
 
     #IMG_URL  = 'https://minitravellers.co.uk/wp-content/uploads/2019/05/40612080213_81852c19fc_k.jpg'
@@ -80,14 +77,14 @@ def test_img2img():
     if 'status' in response:
         if response[ 'status' ] == 'success':
             images = response[ 'images' ]
-            for i, image in enumerate( images ):
+            for image in images:
                 plt.imshow( b64_to_pil( image['base64'] ) )
                 plt.show( block=True )
                 plt.pause( 10 )
                 plt.close()
 
 def test_inpaint():
-    ENDPOINT = "http://localhost:1337/masking"    
+    ENDPOINT = "http://localhost:1337/masking"
     IMG_URL  = 'https://raw.githubusercontent.com/CompVis/stable-diffusion/main/data/inpainting_examples/overture-creations-5sI6fQgYIuo.png'
     MSK_URL  = 'https://raw.githubusercontent.com/CompVis/stable-diffusion/main/data/inpainting_examples/overture-creations-5sI6fQgYIuo_mask.png'
 
@@ -108,7 +105,7 @@ def test_inpaint():
     if 'status' in response:
         if response[ 'status' ] == 'success':
             images = response[ 'images' ]
-            for i, image in enumerate( images ):
+            for image in images:
                 plt.imshow( b64_to_pil( image['base64'] ) )
                 plt.show( block=True )
                 plt.pause( 10 )

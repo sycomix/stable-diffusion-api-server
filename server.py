@@ -18,8 +18,7 @@ import diffusers
 def retrieve_param(key, data, cast, default):
     if key in data:
         value = flask.request.form[ key ]
-        value = cast( value )
-        return value
+        return cast( value )
     return default
 
 def pil_to_b64(input):
@@ -30,8 +29,7 @@ def pil_to_b64(input):
     return output
 
 def b64_to_pil(input):
-    output = Image.open( BytesIO( base64.b64decode( input ) ) )
-    return output
+    return Image.open( BytesIO( base64.b64decode( input ) ) )
 
 def get_compute_platform(context):
     try:
@@ -58,7 +56,7 @@ class Engine(object):
 class EngineStableDiffusion(Engine):
     def __init__(self, pipe, sibling=None, custom_model_path=None, requires_safety_checker=True):
         super().__init__()
-        if sibling == None:
+        if sibling is None:
             self.engine = pipe.from_pretrained( 'runwayml/stable-diffusion-v1-5', use_auth_token=hf_token.strip() )
         elif custom_model_path:
             if requires_safety_checker:
@@ -98,10 +96,7 @@ class EngineManager(object):
         return True
 
     def get_engine(self, name):
-        if not self.has_engine( name ):
-            return None
-        engine = self.engines[ name ]
-        return engine
+        return None if not self.has_engine( name ) else self.engines[ name ]
 
 ##################################################
 # App
@@ -116,7 +111,7 @@ config = json.loads(config_file.read())
 
 hf_token = config['hf_token']
 
-if (hf_token == None):
+if hf_token is None:
     sys.exit('No Hugging Face token found in config.json.')
 
 custom_models = config['custom_models'] if 'custom_models' in config else []
@@ -144,10 +139,7 @@ def stable_ping():
 
 @app.route('/custom_models', methods=['GET'])
 def stable_custom_models():
-    if custom_models == None:
-        return flask.jsonify( [] )
-    else:
-        return custom_models
+    return flask.jsonify( [] ) if custom_models is None else custom_models
 
 @app.route('/txt2img', methods=['POST'])
 def stable_txt2img():
@@ -167,7 +159,7 @@ def stable_custom(model):
 
 def _generate(task, engine=None):
     # Retrieve engine:
-    if engine == None:
+    if engine is None:
         engine = task
 
     engine = manager.get_engine( engine )
@@ -180,11 +172,14 @@ def _generate(task, engine=None):
         seed = retrieve_param( 'seed', flask.request.form, int, 0 )
         count = retrieve_param( 'num_outputs', flask.request.form, int,   1 )
         total_results = []
-        for i in range( count ):
-            if (seed == 0):
-                generator = torch.Generator( device=get_compute_platform('generator') )
-            else:
-                generator = torch.Generator( device=get_compute_platform('generator') ).manual_seed( seed )
+        for _ in range( count ):
+            generator = (
+                torch.Generator(device=get_compute_platform('generator'))
+                if (seed == 0)
+                else torch.Generator(
+                    device=get_compute_platform('generator')
+                ).manual_seed(seed)
+            )
             new_seed = generator.seed()
             prompt = flask.request.form[ 'prompt' ]
             args_dict = {
@@ -197,7 +192,7 @@ def _generate(task, engine=None):
             if (task == 'txt2img'):
                 args_dict[ 'width' ] = retrieve_param( 'width', flask.request.form, int,   512 )
                 args_dict[ 'height' ] = retrieve_param( 'height', flask.request.form, int,   512 )
-            if (task == 'img2img' or task == 'masking'):
+            if task in ['img2img', 'masking']:
                 init_img_b64 = flask.request.form[ 'init_image' ]
                 init_img_b64 = re.sub( '^data:image/png;base64,', '', init_img_b64 )
                 init_img_pil = b64_to_pil( init_img_b64 )
@@ -214,19 +209,20 @@ def _generate(task, engine=None):
             total_results.append( pipeline_output )
         # Prepare response
         output_data[ 'status' ] = 'success'
-        images = []
-        for result in total_results:
-            images.append({
-                'base64' : pil_to_b64( result['image'].convert( 'RGB' ) ),
-                'seed' : result['seed'],
+        images = [
+            {
+                'base64': pil_to_b64(result['image'].convert('RGB')),
+                'seed': result['seed'],
                 'mime_type': 'image/png',
-                'nsfw': result['nsfw']
-            })
-        output_data[ 'images' ] = images        
+                'nsfw': result['nsfw'],
+            }
+            for result in total_results
+        ]
+        output_data[ 'images' ] = images
     except RuntimeError as e:
         output_data[ 'status' ] = 'failure'
         output_data[ 'message' ] = 'A RuntimeError occurred. You probably ran out of GPU memory. Check the server logs for more details.'
-        print(str(e))
+        print(e)
     return flask.jsonify( output_data )
 
 if __name__ == '__main__':
